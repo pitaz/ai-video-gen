@@ -40,7 +40,7 @@ export class StoriesProcessor {
 
       const visualAssets = await Promise.all(
         storyData.scenes.map((scene, index) =>
-          this.aiProvidersService.generateVisual(scene.description, style),
+          this.aiProvidersService.generateVisual(scene.description, style, 'image'),
         ),
       );
 
