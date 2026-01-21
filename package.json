@@ -1,0 +1,16 @@
+{
+  "name": "video-creator",
+  "version": "1.0.0",
+  "description": "AI Video Stories - Expo Application",
+  "private": true,
+  "workspaces": [
+    "app",
+    "backend"
+  ],
+  "scripts": {
+    "install:all": "yarn install && cd app && yarn install && cd ../backend && yarn install",
+    "start:app": "cd app && yarn start",
+    "start:backend": "cd backend && yarn run start:dev"
+  },
+  "license": "MIT"
+}
