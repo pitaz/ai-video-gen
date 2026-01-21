@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useProjectStore, Scene } from '../store/projectStore';
@@ -7,6 +7,7 @@ import { StyleThumbnail } from '../components/StyleThumbnail';
 import { Dropdown } from '../components/Dropdown';
 import { Button } from '../components/Button';
 import { theme } from '../theme';
+import { enhanceScene } from '../services/api';
 
 const VISUAL_STYLES = [
   {
@@ -31,8 +32,27 @@ export default function CreateSceneScreen() {
   const [selectedStyle, setSelectedStyle] = useState('cinematic');
   const [ratio, setRatio] = useState('16:9 Wide');
   const [length, setLength] = useState('10 Seconds');
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const router = useRouter();
   const { selectedProject, updateProject } = useProjectStore();
+
+  const handleAIEnhance = async () => {
+    if (!prompt.trim() || isEnhancing) return;
+
+    setIsEnhancing(true);
+    try {
+      const response = await enhanceScene({
+        description: prompt.trim(),
+        style: selectedStyle,
+      });
+      setPrompt(response.description);
+    } catch (error) {
+      console.error('Error enhancing scene:', error);
+      // Show error to user (you can add a toast/alert here)
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const handleCreateScene = () => {
     if (!prompt.trim() || !selectedProject) {
@@ -95,9 +115,19 @@ export default function CreateSceneScreen() {
                 multiline
                 textAlignVertical="top"
               />
-              <TouchableOpacity style={styles.aiEnhanceButton}>
-                <Text style={styles.aiEnhanceIcon}>✨</Text>
-                <Text style={styles.aiEnhanceText}>AI Enhance</Text>
+              <TouchableOpacity
+                style={[styles.aiEnhanceButton, isEnhancing && styles.aiEnhanceButtonDisabled]}
+                onPress={handleAIEnhance}
+                disabled={isEnhancing || !prompt.trim()}
+              >
+                {isEnhancing ? (
+                  <ActivityIndicator size="small" color={theme.colors.dark.text.primary} />
+                ) : (
+                  <>
+                    <Text style={styles.aiEnhanceIcon}>✨</Text>
+                    <Text style={styles.aiEnhanceText}>AI Enhance</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -251,6 +281,9 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
+  },
+  aiEnhanceButtonDisabled: {
+    opacity: 0.5,
   },
   aiEnhanceIcon: {
     fontSize: 16,

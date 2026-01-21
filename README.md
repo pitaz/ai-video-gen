@@ -103,8 +103,8 @@ The backend processes stories through these steps:
 - Share and download functionality
 
 ### 🚧 TODO
-- Integrate actual LLM for story expansion (OpenAI, Anthropic, etc.)
-- Integrate image/video AI services (Stable Diffusion, Runway, etc.)
+- ✅ Integrate actual LLM for story expansion (OpenAI) - **COMPLETED**
+- ✅ Integrate image/video AI services (Stable Diffusion via Replicate) - **COMPLETED**
 - Integrate TTS service (ElevenLabs, Google TTS, etc.)
 - Implement FFmpeg video composition
 - Add storage (S3-compatible) for assets
@@ -119,6 +119,11 @@ The backend processes stories through these steps:
 - `PORT` - Server port (default: 3000)
 - `REDIS_HOST` - Redis host (default: localhost)
 - `REDIS_PORT` - Redis port (default: 6379)
+- `OPENAI_API_KEY` - OpenAI API key for LLM features (required for story expansion)
+- `OPENAI_MODEL` - OpenAI model to use (default: gpt-4o-mini)
+- `REPLICATE_API_TOKEN` - Replicate API token for image/video generation (required for visual generation)
+- `REPLICATE_IMAGE_MODEL` - Replicate model for image generation (default: Stable Diffusion XL)
+- `REPLICATE_VIDEO_MODEL` - Replicate model for video generation (default: Stable Video Diffusion)
 
 ### Frontend
 - `EXPO_PUBLIC_API_URL` - Backend API URL
@@ -131,6 +136,10 @@ The backend processes stories through these steps:
 - You'll need to create app assets (icon.png, splash.png, adaptive-icon.png, favicon.png) in the `app/assets/` directory.
 - The app uses Expo Router file-based routing. All routes are in `app/app/`.
 - Redis is required for the job queue. Use Docker for easy setup: `docker run -d -p 6379:6379 redis`
+
+## API Documentation
+
+For detailed API documentation including all endpoints, request/response formats, and examples, see [API_DOCUMENTATION.md](./API_DOCUMENTATION.md).
 
 ## License
 
