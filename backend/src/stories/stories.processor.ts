@@ -39,9 +39,21 @@ export class StoriesProcessor {
       });
 
       const visualAssets = await Promise.all(
-        storyData.scenes.map((scene, index) =>
-          this.aiProvidersService.generateVisual(scene.description, style, 'image'),
-        ),
+        storyData.scenes.map(async (scene, index) => {
+          try {
+            const url = await this.aiProvidersService.generateVisual(scene.description, style, 'video');
+            if (url && !url.includes('example.com')) {
+              console.log(`✅ [Scene ${index + 1}] Generated video URL: ${url?.substring(0, 80)}...`);
+            } else {
+              console.warn(`⚠️  [Scene ${index + 1}] Received placeholder URL (video generation likely failed)`);
+            }
+            return url;
+          } catch (error) {
+            console.error(`❌ [Scene ${index + 1}] Unexpected error generating video:`, error);
+            // Return placeholder so processing can continue
+            return `https://example.com/generated-video-${Date.now()}-${index}.mp4`;
+          }
+        }),
       );
 
       // Step 3: Generate narration

@@ -1,0 +1,135 @@
+---
+description: Architecture, type safety, validation, layering, LLM safety, and stack-specific standards
+alwaysApply: true
+---
+
+# Project Standards
+
+## 1. Architecture Before Implementation
+
+Never generate implementation code before defining:
+
+- Folder structure
+- Domain models
+- API contracts
+- Service boundaries
+
+Architecture must be reviewed before coding begins.
+
+## 2. Strict Type Safety
+
+- No `any` types.
+- No implicit return types.
+- All functions must declare explicit return types.
+- DTOs must be fully typed.
+- Shared types must be centralized and reusable.
+
+## 3. Validate at All Boundaries
+
+All external inputs must be validated:
+
+- HTTP input → DTO validation
+- LLM output → Zod schema validation
+- Environment variables → Config validation
+- External API responses → Response schema validation
+
+Never trust external input.
+
+## 4. Enforce Separation of Concerns
+
+- **Controllers**: No business logic. Handle request validation and response formatting only.
+- **Services**: Orchestration logic only.
+- **LLM Layer**: Prompt construction, parsing, validation, retry logic. No database access.
+- **Repositories**: Database access only. No business logic.
+
+## 5. Defensive LLM Integration
+
+When generating LLM-related code:
+
+- Enforce strict JSON output
+- Parse defensively (strip code fences if necessary)
+- Validate with schema (Zod or equivalent)
+- Retry once with a repair prompt if validation fails
+- Persist raw output for debugging
+- Never return unvalidated model output to clients
+
+## 6. Explicit Error Handling
+
+- All async calls must use try/catch
+- No silent failures
+- All errors must be logged with contextual metadata
+- Avoid generic `throw new Error()`
+- Prefer domain-specific error classes
+
+## 7. Small, Iterative Changes
+
+- Never generate large multi-file code dumps
+- Implement one module at a time
+- Keep diffs small and reviewable
+- Do not modify unrelated files without confirmation
+
+## 8. Logging & Observability
+
+Production code must:
+
+- Log request start and end
+- Log LLM latency
+- Log failure reasons
+- Include correlation/request IDs
+- Avoid logging sensitive data
+
+## 9. AWS Serverless Readiness
+
+Generated backend code must:
+
+- Be stateless
+- Avoid filesystem dependencies
+- Use environment variables for configuration
+- Assume serverless deployment
+- Avoid long-running blocking operations
+
+## 10. No Hidden Global State
+
+- No implicit singletons
+- Use dependency injection
+- All dependencies must be explicit
+
+---
+
+## Backend (NestJS)
+
+- Use modular architecture
+- DTOs must use validation decorators
+- Prisma models must reflect domain entities
+- Avoid circular service dependencies
+- All configuration must flow through ConfigService
+
+## React / React Native
+
+- Functional components only
+- Explicit prop typing
+- No business logic inside UI components
+- Abstract API calls into service layer
+- Always include loading, error, and empty states
+- Avoid unnecessary prop drilling (use context or state management appropriately)
+
+## AWS Serverless
+
+- Secrets must never be hardcoded
+- Assume Lambda cold starts
+- Avoid heavy imports at root scope
+- Consider execution timeouts
+- Apply IAM least-privilege principles
+
+## Testing Requirements
+
+- LLM integration must include: schema validation tests, malformed output tests, retry logic tests
+- Services must be unit-testable
+- Avoid logic tightly coupled to framework decorators
+
+## Security Standards
+
+- Sanitize user input before sending to LLM
+- Defend against prompt injection
+- Never log secrets
+- Consider rate limiting for abuse prevention

@@ -426,8 +426,9 @@ REPLICATE_API_TOKEN=r8_...
 
 # Optional: Customize models
 OPENAI_MODEL=gpt-4o-mini
-REPLICATE_IMAGE_MODEL=stability-ai/sdxl:...
-REPLICATE_VIDEO_MODEL=stability-ai/stable-video-diffusion:...
+# Use model name without version hash to use latest version, or specify version if needed
+REPLICATE_IMAGE_MODEL=stability-ai/sdxl
+REPLICATE_VIDEO_MODEL=stability-ai/stable-video-diffusion
 ```
 
 ### Without API Keys
@@ -491,6 +492,66 @@ The frontend app includes working examples:
 
 ---
 
+## Video URL Usage
+
+### Getting Real Video URLs
+
+The API returns actual video URLs from Replicate when:
+1. `REPLICATE_API_TOKEN` is configured in your backend `.env` file
+2. Video generation completes successfully
+
+**Example Response:**
+```json
+{
+  "jobId": "7cbe0eef-d619-4533-bab8-f73acb187648",
+  "status": "completed",
+  "videoUrl": "https://replicate.delivery/pbxt/abc123.../output.mp4"
+}
+```
+
+### Using Video URLs
+
+**In the Frontend (React Native/Expo):**
+```typescript
+import { Video } from 'expo-av';
+
+<Video
+  source={{ uri: jobStatus.videoUrl }}
+  style={{ width: '100%', height: 200 }}
+  useNativeControls
+  resizeMode="contain"
+/>
+```
+
+**Direct Download:**
+```bash
+curl -O https://replicate.delivery/pbxt/abc123.../output.mp4
+```
+
+**In a Web Browser:**
+```html
+<video src="https://replicate.delivery/pbxt/abc123.../output.mp4" controls></video>
+```
+
+### Troubleshooting
+
+**If you get placeholder URLs (`https://example.com/...`):**
+1. Check that `REPLICATE_API_TOKEN` is set in `backend/.env`
+2. Verify your Replicate API token is valid
+3. Check backend logs for errors during video generation
+4. Ensure you have sufficient Replicate credits
+
+**If you get "Invalid version or not permitted" errors:**
+1. The model version hash in your config may be outdated or invalid
+2. Use just the model name (e.g., `stability-ai/sdxl`) without the version hash to use the latest version
+3. Or find a valid version hash from the Replicate website/model page
+4. Check backend logs for specific error messages about model versions
+
+**Note:** Replicate video URLs are temporary. For production, implement:
+- Video storage (S3, Cloudinary, etc.)
+- FFmpeg composition to merge multiple scene videos
+- Permanent URL generation
+
 ## Next Steps
 
 - Add authentication/authorization
@@ -499,3 +560,5 @@ The frontend app includes working examples:
 - Add response caching
 - Add webhook support for job completion
 - Add batch processing endpoints
+- Implement FFmpeg video concatenation for multi-scene videos
+- Add permanent video storage (S3, Cloudinary, etc.)

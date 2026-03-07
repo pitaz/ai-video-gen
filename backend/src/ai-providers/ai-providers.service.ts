@@ -36,12 +36,17 @@ export class AIProvidersService {
     const replicateKey = this.configService.get<string>('REPLICATE_API_TOKEN');
     if (replicateKey) {
       // Replicate is exported as a constructor function
-      this.replicate = new Replicate({
-        auth: replicateKey,
-      });
-      this.logger.log('Replicate client initialized');
+      try {
+        this.replicate = new Replicate({
+          auth: replicateKey,
+        });
+        this.logger.log(`✅ Replicate client initialized with token: ${replicateKey.substring(0, 10)}...`);
+      } catch (error) {
+        this.logger.error('Failed to initialize Replicate client:', error);
+        this.replicate = null;
+      }
     } else {
-      this.logger.warn('REPLICATE_API_TOKEN not found. Image/Video generation will be disabled.');
+      this.logger.warn('⚠️  REPLICATE_API_TOKEN not found. Image/Video generation will be disabled.');
     }
   }
 
@@ -172,21 +177,44 @@ Make sure the JSON is valid and properly formatted.`;
    */
   async generateVisual(description: string, style: string, type: 'image' | 'video' = 'image'): Promise<string> {
     if (!this.replicate) {
-      this.logger.warn('Replicate not configured, using fallback URL');
+      this.logger.warn(
+        `Replicate not configured (REPLICATE_API_TOKEN missing), using fallback URL for ${type}`
+      );
       return type === 'video' 
         ? `https://example.com/generated-video-${Date.now()}.mp4`
         : `https://example.com/generated-image-${Date.now()}.jpg`;
     }
 
     try {
+      this.logger.log(`Generating ${type} for: ${description.substring(0, 50)}...`);
       if (type === 'video') {
         return await this.generateVideo(description, style);
       } else {
         return await this.generateImage(description, style);
       }
     } catch (error) {
-      this.logger.error('Error generating visual:', error);
+      // Log detailed error information
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
+      this.logger.error(`❌ Error generating ${type}:`, errorMessage);
+      if (errorStack) {
+        this.logger.error(`Stack trace: ${errorStack.substring(0, 500)}`);
+      }
+      
+      // Log additional error details if available
+      if (error && typeof error === 'object') {
+        const errorObj = error as any;
+        if (errorObj.response) {
+          this.logger.error(`API Response: ${JSON.stringify(errorObj.response.data || errorObj.response)}`);
+        }
+        if (errorObj.status) {
+          this.logger.error(`HTTP Status: ${errorObj.status}`);
+        }
+      }
+      
       // Return fallback URL on error
+      this.logger.warn(`Returning placeholder URL due to error`);
       return type === 'video'
         ? `https://example.com/generated-video-${Date.now()}.mp4`
         : `https://example.com/generated-image-${Date.now()}.jpg`;
@@ -203,13 +231,19 @@ Make sure the JSON is valid and properly formatted.`;
 
     try {
       // Use Stable Diffusion XL for high-quality image generation
-      const model = this.configService.get<string>('REPLICATE_IMAGE_MODEL') || 
-        'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35cae5a08b6';
+      // Try configured model first, then fallback to model name without version hash
+      let model = this.configService.get<string>('REPLICATE_IMAGE_MODEL');
+      
+      // If no model configured, use model name (Replicate will use latest version)
+      if (!model) {
+        model = 'stability-ai/sdxl';
+      }
 
       // Build enhanced prompt with style
       const enhancedPrompt = this.buildImagePrompt(description, style);
 
-      this.logger.log(`Generating image with prompt: ${enhancedPrompt.substring(0, 100)}...`);
+      this.logger.log(`Generating image with model: ${model}`);
+      this.logger.log(`Prompt: ${enhancedPrompt.substring(0, 100)}...`);
 
       const output = await this.replicate.run(model as any, {
         input: {
@@ -231,6 +265,15 @@ Make sure the JSON is valid and properly formatted.`;
       return imageUrl;
     } catch (error) {
       this.logger.error('Error generating image:', error);
+      
+      // If model version error, suggest using model name without version
+      if (error instanceof Error && error.message.includes('Invalid version')) {
+        this.logger.error(
+          'Model version error. Try setting REPLICATE_IMAGE_MODEL to just the model name ' +
+          '(e.g., "stability-ai/sdxl") without the version hash, or use a valid version.'
+        );
+      }
+      
       throw error;
     }
   }
@@ -249,10 +292,16 @@ Make sure the JSON is valid and properly formatted.`;
       const imageUrl = await this.generateImage(description, style);
 
       // Use Stable Video Diffusion for image-to-video
-      const videoModel = this.configService.get<string>('REPLICATE_VIDEO_MODEL') ||
-        'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb47a8170ad8ec4436d7811f9ac6b5b9ef4fd5a68f';
+      // Try configured model first, then fallback to model name without version hash
+      let videoModel = this.configService.get<string>('REPLICATE_VIDEO_MODEL');
+      
+      // If no model configured, use model name (Replicate will use latest version)
+      if (!videoModel) {
+        videoModel = 'stability-ai/stable-video-diffusion';
+      }
 
-      this.logger.log(`Generating video from image: ${imageUrl.substring(0, 50)}...`);
+      this.logger.log(`Generating video with model: ${videoModel}`);
+      this.logger.log(`From image: ${imageUrl.substring(0, 50)}...`);
 
       const output = await this.replicate.run(videoModel as any, {
         input: {
@@ -273,6 +322,15 @@ Make sure the JSON is valid and properly formatted.`;
       return videoUrl;
     } catch (error) {
       this.logger.error('Error generating video:', error);
+      
+      // If model version error, suggest using model name without version
+      if (error instanceof Error && error.message.includes('Invalid version')) {
+        this.logger.error(
+          'Model version error. Try setting REPLICATE_VIDEO_MODEL to just the model name ' +
+          '(e.g., "stability-ai/stable-video-diffusion") without the version hash, or use a valid version.'
+        );
+      }
+      
       throw error;
     }
   }
